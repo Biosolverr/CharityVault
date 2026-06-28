@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CharityVault — Trustless Crowdfunding on Base</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- ethers v6 -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.11.1/dist/ethers.umd.min.js"></script>
+
+<style>
+/* ── Reset & Tokens ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080810;
+  --surface:  #111120;
+  --surface2: #1a1a2e;
+  --border:   #252540;
+  --amber:    #f59e0b;
+  --amber-lt: #fcd34d;
+  --amber-dk: #b45309;
+  --text:     #f0f0f8;
+  --muted:    #7070a0;
+  --danger:   #ef4444;
+  --success:  #22c55e;
+  --r:        12px;
+  --font-d:   'Space Grotesk', sans-serif;
+  --font-b:   'Inter', sans-serif;
+  --shadow:   0 4px 24px rgba(0,0,0,.6);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-b);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* ── Nav ─────────────────────────────────────────────────────────────────── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,8,16,.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+}
+.logo {
+  font-family: var(--font-d);
+  font-size: 20px; font-weight: 700;
+  color: var(--amber);
+  letter-spacing: -.5px;
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none;
+}
+.logo svg { width: 26px; height: 26px; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--r);
+  font-family: var(--font-b); font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all .18s;
+  text-decoration: none; white-space: nowrap;
+}
+.btn-primary {
+  background: var(--amber); color: #000;
+}
+.btn-primary:hover { background: var(--amber-lt); transform: translateY(-1px); }
+.btn-ghost {
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--amber); color: var(--amber); }
+.btn-danger {
+  background: transparent; color: var(--danger);
+  border: 1px solid var(--danger);
+}
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-success {
+  background: var(--success); color: #000;
+}
+.btn-success:hover { opacity: .9; }
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.hero {
+  padding: 80px 0 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -120px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(245,158,11,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(245,158,11,.1); color: var(--amber);
+  border: 1px solid rgba(245,158,11,.3);
+  padding: 5px 14px; border-radius: 99px;
+  font-size: 12px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.hero h1 {
+  font-family: var(--font-d);
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 700; line-height: 1.1;
+  letter-spacing: -1.5px;
+  margin-bottom: 20px;
+}
+.hero h1 span { color: var(--amber); }
+.hero p {
+  color: var(--muted);
+  font-size: 18px; max-width: 560px; margin: 0 auto 32px;
+}
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+/* ── Stats bar ───────────────────────────────────────────────────────────── */
+.stats {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 0;
+  margin-bottom: 48px;
+}
+.stats-inner {
+  display: flex; gap: 0; justify-content: center;
+  flex-wrap: wrap;
+}
+.stat-item {
+  text-align: center; padding: 0 40px;
+  border-right: 1px solid var(--border);
+}
+.stat-item:last-child { border-right: none; }
+.stat-val {
+  font-family: var(--font-d); font-size: 28px; font-weight: 700;
+  color: var(--amber);
+}
+.stat-lbl { font-size: 12px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+
+/* ── Section ─────────────────────────────────────────────────────────────── */
+.section { padding: 0 0 80px; }
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+}
+.section-title {
+  font-family: var(--font-d); font-size: 24px; font-weight: 700;
+}
+
+/* ── Filter tabs ─────────────────────────────────────────────────────────── */
+.filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab {
+  padding: 6px 16px; border-radius: 99px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--muted);
+  transition: all .15s;
+}
+.tab:hover { border-color: var(--amber); color: var(--amber); }
+.tab.active { background: var(--amber); color: #000; border-color: var(--amber); }
+
+/* ── Campaign grid ───────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+/* ── Campaign card ───────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  cursor: pointer;
+}
+.card:hover { border-color: rgba(245,158,11,.4); transform: translateY(-2px); }
+.card-img {
+  width: 100%; height: 180px; object-fit: cover;
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px;
+}
+.card-body { padding: 20px; }
+.card-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+}
+.badge-active   { background: rgba(34,197,94,.12);  color: var(--success); }
+.badge-success  { background: rgba(245,158,11,.15); color: var(--amber); }
+.badge-failed   { background: rgba(239,68,68,.12);  color: var(--danger); }
+.badge-claimed  { background: rgba(107,114,128,.12);color: var(--muted); }
+.badge-cancelled{ background: rgba(239,68,68,.12);  color: var(--danger); }
+.badge-cat {
+  background: var(--surface2); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-family: var(--font-d); font-size: 17px; font-weight: 600;
+  margin-bottom: 6px; line-height: 1.3;
+}
+.card-desc {
+  color: var(--muted); font-size: 13px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 16px;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.progress-wrap { margin-bottom: 14px; }
+.progress-labels {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--muted); margin-bottom: 6px;
+}
+.progress-labels strong { color: var(--text); }
+.progress-bar {
+  height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; border-radius: 99px;
+  background: linear-gradient(90deg, var(--amber-dk), var(--amber), var(--amber-lt));
+  box-shadow: 0 0 8px rgba(245,158,11,.5);
+  transition: width .6s ease;
+  min-width: 2px;
+}
+.progress-fill.full { box-shadow: 0 0 12px rgba(245,158,11,.8); }
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--muted);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty {
+  grid-column: 1/-1;
+  text-align: center; padding: 80px 20px;
+}
+.empty-icon { font-size: 56px; margin-bottom: 16px; }
+.empty-title { font-family: var(--font-d); font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.empty-sub { color: var(--muted); margin-bottom: 24px; }
+
+/* ── Modal ───────────────────────────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%; max-width: 560px;
+  max-height: 90vh; overflow-y: auto;
+  padding: 32px;
+  transform: translateY(16px); transition: transform .25s;
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 24px; gap: 16px;
+}
+.modal-title { font-family: var(--font-d); font-size: 22px; font-weight: 700; }
+.modal-close {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); width: 32px; height: 32px; border-radius: 8px;
+  cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all .15s;
+}
+.modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--muted); }
+input, textarea, select {
+  width: 100%;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 8px;
+  padding: 10px 14px; font-family: var(--font-b); font-size: 14px;
+  outline: none; transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--amber); }
+textarea { resize: vertical; min-height: 80px; }
+select option { background: var(--surface2); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.input-suffix {
+  position: relative;
+}
+.input-suffix input { padding-right: 50px; }
+.input-suffix span {
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 13px; pointer-events: none;
+}
+
+/* ── Campaign detail modal ───────────────────────────────────────────────── */
+.detail-img {
+  width: 100%; height: 200px; object-fit: cover;
+  border-radius: 10px; background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px; margin-bottom: 20px;
+}
+.detail-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.detail-title { font-family: var(--font-d); font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+.detail-desc { color: var(--muted); margin-bottom: 20px; font-size: 14px; line-height: 1.7; }
+.detail-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+.detail-stat {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; text-align: center;
+}
+.detail-stat-val { font-family: var(--font-d); font-size: 18px; font-weight: 700; color: var(--amber); }
+.detail-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+.detail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+.contribute-input {
+  display: flex; gap: 10px; align-items: center; margin-top: 16px;
+}
+.contribute-input input { flex: 1; }
+.contributors-list { margin-top: 16px; }
+.contributor-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.contributor-row:last-child { border-bottom: none; }
+.addr { font-family: monospace; color: var(--muted); font-size: 12px; }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+#toast-container {
+  position: fixed; top: 80px; right: 20px; z-index: 300;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: 10px;
+  padding: 12px 18px;
+  min-width: 280px; max-width: 380px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  animation: slideIn .25s ease;
+}
+.toast.err { border-left-color: var(--danger); }
+.toast.ok  { border-left-color: var(--success); }
+.toast-title { font-weight: 600; margin-bottom: 2px; }
+.toast-msg { color: var(--muted); }
+@keyframes slideIn { from { opacity:0; transform: translateX(20px); } to { opacity:1; transform: translateX(0); } }
+
+/* ── Connect prompt ──────────────────────────────────────────────────────── */
+.wallet-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 99px; padding: 6px 14px;
+  font-size: 13px; font-weight: 500;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+/* ── Loader ──────────────────────────────────────────────────────────────── */
+.loader {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(245,158,11,.2);
+  border-top-color: var(--amber);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-center { display: flex; justify-content: center; padding: 60px; grid-column: 1/-1; }
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .form-row { grid-template-columns: 1fr; }
+  .detail-stats { grid-template-columns: 1fr 1fr; }
+  .stat-item { padding: 0 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ── Nav ─────────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="wrap nav-inner">
+    <a href="#" class="logo">
+      <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 2L4 8v10l9 6 9-6V8L13 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M13 2v22M4 8l9 6 9-6" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+      CharityVault
+    </a>
+    <div class="nav-right">
+      <span id="network-badge" style="display:none; font-size:12px; color:var(--muted);"></span>
+      <div id="wallet-area">
+        <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-label">
+      <svg width="12" height="12" fill="none" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" fill="currentColor"/></svg>
+      Live on Base · Trustless Escrow
+    </div>
+    <h1>Fund Dreams.<br/><span>Without Trust Issues.</span></h1>
+    <p>Every ETH is locked on-chain. If the goal is missed — everyone gets their money back. Automatically.</p>
+    <div class="hero-actions">
+      <button class="btn btn-primary" onclick="openCreate()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Start a Campaign
+      </button>
+      <button class="btn btn-ghost" onclick="document.getElementById('campaigns-section').scrollIntoView({behavior:'smooth'})">Browse Campaigns</button>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats ────────────────────────────────────────────────────────────── -->
+<div class="stats">
+  <div class="wrap">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <div class="stat-val" id="stat-campaigns">—</div>
+        <div class="stat-lbl">Campaigns</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="stat-raised">—</div>
+        <div class="stat-lbl">Total Raised (ETH)</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" id="stat-success">—</div>
+        <div class="stat-lbl">Successful</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Campaigns ────────────────────────────────────────────────────────── -->
+<div class="section wrap" id="campaigns-section">
+  <div class="section-header">
+    <div class="section-title">Active Campaigns</div>
+    <div class="filter-tabs" id="filter-tabs">
+      <button class="tab active" onclick="setFilter('all',this)">All</button>
+      <button class="tab" onclick="setFilter('active',this)">Active</button>
+      <button class="tab" onclick="setFilter('success',this)">Succeeded</button>
+      <button class="tab" onclick="setFilter('failed',this)">Failed</button>
+      <button class="tab" onclick="setFilter('cancelled',this)">Cancelled</button>
+    </div>
+  </div>
+  <div class="grid" id="campaigns-grid">
+    <div class="loading-center"><div class="loader"></div></div>
+  </div>
+</div>
+
+<!-- ── Toast container ──────────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ── CREATE CAMPAIGN MODAL ────────────────────────────────────────────── -->
+<div class="overlay" id="modal-create" onclick="closeIfOverlay(event,'modal-create')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Launch a Campaign</div>
+      <button class="modal-close" onclick="closeModal('modal-create')">✕</button>
+    </div>
+
+    <div class="form-group">
+      <label>Campaign Title *</label>
+      <input type="text" id="c-title" placeholder="Help Max get surgery" maxlength="80" />
+    </div>
+    <div class="form-group">
+      <label>Description *</label>
+      <textarea id="c-desc" placeholder="Tell the story. What is the money for, who benefits?" rows="4"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Cover Image URL</label>
+      <input type="text" id="c-img" placeholder="https://... or ipfs://..." />
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Category</label>
+        <select id="c-cat">
+          <option value="0">🏥 Medical</option>
+          <option value="1">🎪 Event</option>
+          <option value="2">💻 Open Source</option>
+          <option value="3">🖼 NFT Project</option>
+          <option value="4">📦 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Duration (days) *</label>
+        <input type="number" id="c-days" placeholder="30" min="1" max="365" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Funding Goal (ETH) *</label>
+      <div class="input-suffix">
+        <input type="number" id="c-goal" placeholder="0.5" min="0.0001" step="0.001" />
+        <span>ETH</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:8px;" id="btn-create" onclick="createCampaign()">
+      Launch Campaign
+    </button>
+  </div>
+</div>
+
+<!-- ── CAMPAIGN DETAIL MODAL ─────────────────────────────────────────────── -->
+<div class="overlay" id="modal-detail" onclick="closeIfOverlay(event,'modal-detail')">
+  <div class="modal" id="modal-detail-body">
+    <!-- populated dynamically -->
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────────
+//  CONFIG — update CONTRACT_ADDRESS after deploying
+// ──────────────────────────────────────────────────────────────────────────
+const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // ← replace after deploy
+
+const ABI = [
+  // createCampaign
+  "function createCampaign(string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 durationDays) external returns (uint256)",
+  // contribute
+  "function contribute(uint256 id) external payable",
+  // claimFunds
+  "function claimFunds(uint256 id) external",
+  // refund
+  "function refund(uint256 id) external",
+  // cancelCampaign
+  "function cancelCampaign(uint256 id) external",
+  // view
+  "function campaignCount() external view returns (uint256)",
+  "function getCampaign(uint256 id) external view returns (tuple(uint256 id, address creator, string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 deadline, uint256 raised, bool claimed, bool cancelled))",
+  "function getCampaigns(uint256 offset, uint256 limit) external view returns (tuple(uint256 id, address creator, string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 deadline, uint256 raised, bool claimed, bool cancelled)[])",
+  "function getContributors(uint256 id) external view returns (address[])",
+  "function getContribution(uint256 id, address contributor) external view returns (uint256)",
+  "function getStatus(uint256 id) external view returns (uint8)",
+  // events
+  "event CampaignCreated(uint256 indexed id, address indexed creator, string title, uint256 goal, uint256 deadline, uint8 category)",
+  "event ContributionMade(uint256 indexed campaignId, address indexed contributor, uint256 amount, uint256 totalRaised)",
+  "event FundsClaimed(uint256 indexed campaignId, address indexed creator, uint256 amount)",
+  "event RefundIssued(uint256 indexed campaignId, address indexed contributor, uint256 amount)",
+  "event CampaignCancelled(uint256 indexed campaignId)",
+];
+
+const CATS  = ["🏥 Medical","🎪 Event","💻 Open Source","🖼 NFT Project","📦 Other"];
+const CAT_ICONS = ["🏥","🎪","💻","🖼","📦"];
+const STATUSES = [
+  {label:"Active",    cls:"badge-active"},
+  {label:"Succeeded", cls:"badge-success"},
+  {label:"Failed",    cls:"badge-failed"},
+  {label:"Claimed",   cls:"badge-claimed"},
+  {label:"Cancelled", cls:"badge-cancelled"},
+];
+
+let provider, signer, contract;
+let account = null;
+let allCampaigns = [];
+let currentFilter = "all";
+
+// ── Wallet ────────────────────────────────────────────────────────────────
+async function connectWallet() {
+  if (!window.ethereum) { toast("No wallet found", "Install MetaMask or Coinbase Wallet", "err"); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer   = await provider.getSigner();
+    account  = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    const net = await provider.getNetwork();
+    document.getElementById("network-badge").textContent = "Chain " + net.chainId;
+    document.getElementById("network-badge").style.display = "";
+    document.getElementById("wallet-area").innerHTML =
+      `<div class="wallet-pill"><div class="dot"></div>${shortAddr(account)}</div>`;
+
+    toast("Wallet connected", shortAddr(account), "ok");
+    loadCampaigns();
+
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
+  } catch(e) {
+    toast("Connection failed", e.message, "err");
+  }
+}
+
+async function ensureReadOnly() {
+  if (provider) return;
+  // Read-only on Base mainnet
+  provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+}
+
+// ── Load campaigns ────────────────────────────────────────────────────────
+async function loadCampaigns() {
+  try {
+    await ensureReadOnly();
+    if (!contract) return;
+
+    const count = Number(await contract.campaignCount());
+    if (count === 0) {
+      allCampaigns = [];
+      renderGrid();
+      updateStats();
+      return;
+    }
+
+    // Load all in one call
+    const raw = await contract.getCampaigns(0, count);
+    // Enrich with status
+    const enriched = await Promise.all(raw.map(async (c) => {
+      const st = Number(await contract.getStatus(c.id));
+      return { ...parseC(c), status: st };
+    }));
+    allCampaigns = enriched;
+    renderGrid();
+    updateStats();
+  } catch(e) {
+    console.error(e);
+    document.getElementById("campaigns-grid").innerHTML =
+      `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">⚠️</div><div class="empty-title">Could not load campaigns</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+function parseC(c) {
+  return {
+    id:          Number(c.id),
+    creator:     c.creator,
+    title:       c.title,
+    description: c.description,
+    imageUrl:    c.imageUrl,
+    category:    Number(c.category),
+    goal:        c.goal,
+    deadline:    Number(c.deadline),
+    raised:      c.raised,
+    claimed:     c.claimed,
+    cancelled:   c.cancelled,
+  };
+}
+
+function updateStats() {
+  const total = allCampaigns.length;
+  const raised = allCampaigns.reduce((s,c) => s + Number(ethers.formatEther(c.raised)), 0);
+  const success = allCampaigns.filter(c => c.status === 1 || c.status === 3).length;
+  document.getElementById("stat-campaigns").textContent = total;
+  document.getElementById("stat-raised").textContent = raised.toFixed(4);
+  document.getElementById("stat-success").textContent = success;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById("campaigns-grid");
+  let list = allCampaigns;
+
+  if (currentFilter !== "all") {
+    const map = {active:0, success:1, failed:2, claimed:3, cancelled:4};
+    list = list.filter(c => c.status === map[currentFilter]);
+  }
+
+  if (list.length === 0) {
+    grid.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">🌱</div>
+        <div class="empty-title">No campaigns here yet</div>
+        <div class="empty-sub">Be the first to launch one.</div>
+        <button class="btn btn-primary" onclick="openCreate()">Start a Campaign</button>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(c => cardHTML(c)).join("");
+}
+
+function cardHTML(c) {
+  const goalEth   = parseFloat(ethers.formatEther(c.goal));
+  const raisedEth = parseFloat(ethers.formatEther(c.raised));
+  const pct       = Math.min(100, goalEth > 0 ? (raisedEth / goalEth * 100) : 0);
+  const st        = STATUSES[c.status];
+  const days      = daysLeft(c.deadline);
+  const img       = c.imageUrl && c.imageUrl.trim() !== ""
+    ? `<img class="card-img" src="${escHtml(c.imageUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="card-img" style="display:none">${CAT_ICONS[c.category]}</div>`
+    : `<div class="card-img">${CAT_ICONS[c.category]}</div>`;
+
+  return `
+  <div class="card" onclick="openDetail(${c.id})">
+    ${img}
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="badge ${st.cls}">${st.label}</span>
+        <span class="badge badge-cat">${CATS[c.category]}</span>
+      </div>
+      <div class="card-title">${escHtml(c.title)}</div>
+      <div class="card-desc">${escHtml(c.description)}</div>
+      <div class="progress-wrap">
+        <div class="progress-labels">
+          <span><strong>${raisedEth.toFixed(4)} ETH</strong> raised</span>
+          <span>${pct.toFixed(0)}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill${pct>=100?' full':''}" style="width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span>Goal: ${goalEth} ETH</span>
+        <span>${c.status===0 ? days : ''}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Create campaign ───────────────────────────────────────────────────────
+function openCreate() {
+  if (!account) { toast("Connect wallet first", "", "err"); return; }
+  openModal("modal-create");
+}
+
+async function createCampaign() {
+  const title = document.getElementById("c-title").value.trim();
+  const desc  = document.getElementById("c-desc").value.trim();
+  const img   = document.getElementById("c-img").value.trim();
+  const cat   = parseInt(document.getElementById("c-cat").value);
+  const days  = parseInt(document.getElementById("c-days").value);
+  const goal  = document.getElementById("c-goal").value.trim();
+
+  if (!title) { toast("Missing title", "", "err"); return; }
+  if (!desc)  { toast("Missing description", "", "err"); return; }
+  if (!goal || isNaN(parseFloat(goal))) { toast("Invalid goal", "", "err"); return; }
+  if (!days || days < 1 || days > 365)  { toast("Duration must be 1–365 days", "", "err"); return; }
+
+  const goalWei = ethers.parseEther(goal);
+  const btn = document.getElementById("btn-create");
+  btn.disabled = true;
+  btn.innerHTML = `<div class="loader"></div> Sending...`;
+
+  try {
+    const tx = await contract.createCampaign(title, desc, img, cat, goalWei, days);
+    toast("Transaction sent", "Waiting for confirmation…");
+    const rc = await tx.wait();
+    toast("Campaign created! 🎉", `Tx: ${shortTx(rc.hash)}`, "ok");
+    closeModal("modal-create");
+    clearCreateForm();
+    loadCampaigns();
+  } catch(e) {
+    toast("Transaction failed", parseErr(e), "err");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "Launch Campaign";
+  }
+}
+
+// ── Campaign detail ───────────────────────────────────────────────────────
+async function openDetail(id) {
+  openModal("modal-detail");
+  const body = document.getElementById("modal-detail-body");
+  body.innerHTML = `<div class="loading-center"><div class="loader"></div></div>`;
+
+  try {
+    await ensureReadOnly();
+    const c = parseC(await contract.getCampaign(id));
+    const st = Number(await contract.getStatus(id));
+    const contribs = await contract.getContributors(id);
+    let myContrib = BigInt(0);
+    if (account) {
+      myContrib = await contract.getContribution(id, account);
+    }
+
+    const goalEth   = parseFloat(ethers.formatEther(c.goal));
+    const raisedEth = parseFloat(ethers.formatEther(c.raised));
+    const pct       = Math.min(100, goalEth > 0 ? (raisedEth / goalEth * 100) : 0);
+    const stInfo    = STATUSES[st];
+    const isCreator = account && account.toLowerCase() === c.creator.toLowerCase();
+    const canRefund = (st === 2 || st === 4) && myContrib > 0n;
+    const canClaim  = st === 1 && isCreator;
+    const canCancel = st === 0 && isCreator;
+    const canContribute = st === 0 && account;
+
+    const img = c.imageUrl && c.imageUrl.trim() !== ""
+      ? `<img class="detail-img" src="${escHtml(c.imageUrl)}" alt="" onerror="this.outerHTML='<div class=\\'detail-img\\'>${CAT_ICONS[c.category]}</div>'"/>`
+      : `<div class="detail-img">${CAT_ICONS[c.category]}</div>`;
+
+    // Contributors list (top 5)
+    const top5 = contribs.slice(0, 5);
+    let contribRows = "";
+    for (const addr of top5) {
+      const amt = await contract.getContribution(id, addr);
+      contribRows += `<div class="contributor-row">
+        <span class="addr">${shortAddr(addr)}${addr.toLowerCase()===account?.toLowerCase()?' (you)':''}</span>
+        <span>${parseFloat(ethers.formatEther(amt)).toFixed(6)} ETH</span>
+      </div>`;
+    }
+
+    body.innerHTML = `
+      <div class="modal-header">
+        <div></div>
+        <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+      </div>
+      ${img}
+      <div class="detail-badges">
+        <span class="badge ${stInfo.cls}">${stInfo.label}</span>
+        <span class="badge badge-cat">${CATS[c.category]}</span>
+        ${isCreator ? `<span class="badge" style="background:rgba(245,158,11,.1);color:var(--amber)">Your campaign</span>` : ""}
+      </div>
+      <div class="detail-title">${escHtml(c.title)}</div>
+      <div class="detail-desc">${escHtml(c.description)}</div>
+
+      <div class="detail-stats">
+        <div class="detail-stat">
+          <div class="detail-stat-val">${raisedEth.toFixed(4)}</div>
+          <div class="detail-stat-lbl">ETH Raised</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-val">${goalEth}</div>
+          <div class="detail-stat-lbl">ETH Goal</div>
+        </div>
+        <div class="detail-stat">
+          <div class="detail-stat-val">${contribs.length}</div>
+          <div class="detail-stat-lbl">Backers</div>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-labels">
+          <strong>${pct.toFixed(1)}% funded</strong>
+          <span>${daysLeft(c.deadline)}</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill${pct>=100?' full':''}" style="width:${pct}%"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      ${canContribute ? `
+        <div style="font-weight:600; margin-bottom:8px;">Make a Contribution</div>
+        <div class="contribute-input">
+          <div class="input-suffix" style="flex:1">
+            <input type="number" id="contrib-amount" placeholder="0.01" min="0.0001" step="0.001" />
+            <span>ETH</span>
+          </div>
+          <button class="btn btn-primary" id="btn-contrib" onclick="contribute(${id})">Back this</button>
+        </div>
+        ${myContrib > 0n ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;">Your current contribution: ${parseFloat(ethers.formatEther(myContrib)).toFixed(6)} ETH</div>` : ""}
+      ` : ""}
+
+      ${!account && st===0 ? `<div style="color:var(--muted);font-size:13px;">Connect wallet to contribute.</div>` : ""}
+
+      <div class="detail-actions">
+        ${canClaim  ? `<button class="btn btn-success" onclick="claimFunds(${id})">Withdraw Funds</button>` : ""}
+        ${canRefund ? `<button class="btn btn-primary" onclick="refund(${id})">Get Refund (${parseFloat(ethers.formatEther(myContrib)).toFixed(6)} ETH)</button>` : ""}
+        ${canCancel ? `<button class="btn btn-danger" onclick="cancelCampaign(${id})">Cancel Campaign</button>` : ""}
+      </div>
+
+      ${contribs.length > 0 ? `
+        <div class="divider"></div>
+        <div style="font-weight:600; margin-bottom:4px;">Top Backers</div>
+        <div class="contributors-list">${contribRows}</div>
+        ${contribs.length > 5 ? `<div style="font-size:12px;color:var(--muted);margin-top:8px;">+${contribs.length-5} more backers</div>` : ""}
+      ` : ""}
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--muted);">
+        Created by <span class="addr">${shortAddr(c.creator)}</span> · Campaign #${c.id}
+      </div>
+    `;
+  } catch(e) {
+    body.innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-title">Failed to load</div><div class="empty-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+async function contribute(id) {
+  const amtStr = document.getElementById("contrib-amount")?.value;
+  if (!amtStr || parseFloat(amtStr) <= 0) { toast("Enter an amount", "", "err"); return; }
+
+  const btn = document.getElementById("btn-contrib");
+  btn.disabled = true; btn.innerHTML = `<div class="loader"></div>`;
+
+  try {
+    const tx = await contract.contribute(id, { value: ethers.parseEther(amtStr) });
+    toast("Contribution sent", "Waiting for confirmation…");
+    await tx.wait();
+    toast("Contribution confirmed! 🙏", `${amtStr} ETH`, "ok");
+    closeModal("modal-detail");
+    loadCampaigns();
+  } catch(e) {
+    toast("Failed", parseErr(e), "err");
+    btn.disabled = false; btn.innerHTML = "Back this";
+  }
+}
+
+async function claimFunds(id) {
+  if (!confirm("Withdraw all raised funds to your address?")) return;
+  await execTx(() => contract.claimFunds(id), "Funds claimed! 💰");
+}
+
+async function refund(id) {
+  if (!confirm("Reclaim your contribution?")) return;
+  await execTx(() => contract.refund(id), "Refund received! ✅");
+}
+
+async function cancelCampaign(id) {
+  if (!confirm("Cancel this campaign? Contributors will be able to refund.")) return;
+  await execTx(() => contract.cancelCampaign(id), "Campaign cancelled");
+}
+
+async function execTx(fn, successMsg) {
+  try {
+    const tx = await fn();
+    toast("Transaction sent", "Waiting…");
+    const rc = await tx.wait();
+    toast(successMsg, shortTx(rc.hash), "ok");
+    closeModal("modal-detail");
+    loadCampaigns();
+  } catch(e) {
+    toast("Transaction failed", parseErr(e), "err");
+  }
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add("open"); }
+function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+function closeIfOverlay(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") {
+  document.querySelectorAll(".overlay.open").forEach(m => m.classList.remove("open"));
+}});
+
+function clearCreateForm() {
+  ["c-title","c-desc","c-img","c-days","c-goal"].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = "";
+  });
+  document.getElementById("c-cat").value = "0";
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function toast(title, msg="", type="") {
+  const el = document.createElement("div");
+  el.className = "toast" + (type ? " "+type : "");
+  el.innerHTML = `<div class="toast-title">${title}</div>${msg?`<div class="toast-msg">${escHtml(String(msg).slice(0,120))}</div>`:""}`;
+  document.getElementById("toast-container").appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function shortAddr(a) { return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
+function shortTx(h)   { return h ? h.slice(0,10)+"…" : ""; }
+function escHtml(s)   { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function daysLeft(ts) {
+  const d = Math.floor((ts - Date.now()/1000) / 86400);
+  if (d < 0) return "Ended";
+  if (d === 0) return "Last day!";
+  return `${d} day${d!==1?"s":""} left`;
+}
+function parseErr(e) {
+  const m = e?.reason || e?.data?.message || e?.message || String(e);
+  // Prettify common reverts
+  if (m.includes("GoalNotReached"))     return "Goal not reached yet";
+  if (m.includes("CampaignNotEnded"))   return "Campaign still active";
+  if (m.includes("AlreadyClaimed"))     return "Funds already claimed";
+  if (m.includes("AlreadyCancelled"))   return "Campaign was cancelled";
+  if (m.includes("NothingToRefund"))    return "Nothing to refund";
+  if (m.includes("NotCreator"))         return "Only creator can do this";
+  if (m.includes("CampaignEnded"))      return "Campaign has ended";
+  if (m.includes("ZeroContribution"))   return "Enter an amount";
+  if (m.includes("user rejected"))      return "Transaction rejected";
+  return m.slice(0, 120);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
+    toast("⚙️ Setup required", "Update CONTRACT_ADDRESS in index.html after deploying", "err");
+  }
+  loadCampaigns();
+
+  // Auto-connect if already authorized
+  if (window.ethereum) {
+    window.ethereum.request({ method: "eth_accounts" }).then(accounts => {
+      if (accounts.length > 0) connectWallet();
+    });
+  }
+});
+</script>
+</body>
+</html>
