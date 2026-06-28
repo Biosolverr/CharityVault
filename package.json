@@ -1,8 +1,8 @@
 {
   "name": "charity-vault",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Trustless crowdfunding on Base. Kickstarter-style, no intermediaries.",
+  "main": "hardhat.config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,10 +10,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@nomicfoundation/hardhat-ethers": "^4.0.13",
-    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2",
     "dotenv": "^17.4.2",
-    "hardhat": "^3.9.0"
-  },
-  "type": "module"
+    "hardhat": "^2.28.0"
+  }
 }
