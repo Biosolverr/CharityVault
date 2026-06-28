@@ -588,10 +588,21 @@ let account = null;
 let allCampaigns = [];
 let currentFilter = "all";
 
+function getEthProvider() {
+  // OKX
+  if (window.okxwallet) return window.okxwallet;
+  // Trust Wallet
+  if (window.trustwallet) return window.trustwallet;
+  // Rabby / MetaMask / Coinbase / generic EIP-1193
+  if (window.ethereum) return window.ethereum;
+  return null;
+}
+
 async function connectWallet() {
-  if (!window.ethereum) { toast("No wallet found", "Install MetaMask or Coinbase Wallet", "err"); return; }
+  const eth = getEthProvider();
+  if (!eth) { toast("No wallet found", "Install MetaMask, OKX, Rabby or any EIP-1193 wallet", "err"); return; }
   try {
-    provider = new ethers.BrowserProvider(window.ethereum);
+    provider = new ethers.BrowserProvider(eth);
     await provider.send("eth_requestAccounts", []);
     signer   = await provider.getSigner();
     account  = await signer.getAddress();
@@ -606,8 +617,8 @@ async function connectWallet() {
     toast("Wallet connected", shortAddr(account), "ok");
     loadCampaigns();
 
-    window.ethereum.on("accountsChanged", () => location.reload());
-    window.ethereum.on("chainChanged", () => location.reload());
+    eth.on("accountsChanged", () => location.reload());
+    eth.on("chainChanged", () => location.reload());
   } catch(e) {
     toast("Connection failed", e.message, "err");
   }
@@ -994,8 +1005,9 @@ window.addEventListener("load", () => {
   }
   loadCampaigns();
 
-  if (window.ethereum) {
-    window.ethereum.request({ method: "eth_accounts" }).then(accounts => {
+  const eth = getEthProvider();
+  if (eth) {
+    eth.request({ method: "eth_accounts" }).then(accounts => {
       if (accounts.length > 0) connectWallet();
     });
   }
