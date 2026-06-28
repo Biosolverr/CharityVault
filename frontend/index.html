@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="base:app_id" content="6a40c7833fd39f346e12c412" />
 <title>CharityVault — Trustless Crowdfunding on Base</title>
 
 <!-- Fonts -->
@@ -551,30 +552,20 @@ select option { background: var(--surface2); }
 </div>
 
 <script>
-// ──────────────────────────────────────────────────────────────────────────
-//  CONFIG — update CONTRACT_ADDRESS after deploying
-// ──────────────────────────────────────────────────────────────────────────
 const CONTRACT_ADDRESS = "0xC7e13daEe2f3e551f75E4e76017823e629e4f351";
 
 const ABI = [
-  // createCampaign
   "function createCampaign(string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 durationDays) external returns (uint256)",
-  // contribute
   "function contribute(uint256 id) external payable",
-  // claimFunds
   "function claimFunds(uint256 id) external",
-  // refund
   "function refund(uint256 id) external",
-  // cancelCampaign
   "function cancelCampaign(uint256 id) external",
-  // view
   "function campaignCount() external view returns (uint256)",
   "function getCampaign(uint256 id) external view returns (tuple(uint256 id, address creator, string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 deadline, uint256 raised, bool claimed, bool cancelled))",
   "function getCampaigns(uint256 offset, uint256 limit) external view returns (tuple(uint256 id, address creator, string title, string description, string imageUrl, uint8 category, uint256 goal, uint256 deadline, uint256 raised, bool claimed, bool cancelled)[])",
   "function getContributors(uint256 id) external view returns (address[])",
   "function getContribution(uint256 id, address contributor) external view returns (uint256)",
   "function getStatus(uint256 id) external view returns (uint8)",
-  // events
   "event CampaignCreated(uint256 indexed id, address indexed creator, string title, uint256 goal, uint256 deadline, uint8 category)",
   "event ContributionMade(uint256 indexed campaignId, address indexed contributor, uint256 amount, uint256 totalRaised)",
   "event FundsClaimed(uint256 indexed campaignId, address indexed creator, uint256 amount)",
@@ -597,7 +588,6 @@ let account = null;
 let allCampaigns = [];
 let currentFilter = "all";
 
-// ── Wallet ────────────────────────────────────────────────────────────────
 async function connectWallet() {
   if (!window.ethereum) { toast("No wallet found", "Install MetaMask or Coinbase Wallet", "err"); return; }
   try {
@@ -625,12 +615,10 @@ async function connectWallet() {
 
 async function ensureReadOnly() {
   if (provider) return;
-  // Read-only on Base mainnet
   provider = new ethers.JsonRpcProvider("https://mainnet.base.org");
   contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 }
 
-// ── Load campaigns ────────────────────────────────────────────────────────
 async function loadCampaigns() {
   try {
     await ensureReadOnly();
@@ -644,9 +632,7 @@ async function loadCampaigns() {
       return;
     }
 
-    // Load all in one call
     const raw = await contract.getCampaigns(0, count);
-    // Enrich with status
     const enriched = await Promise.all(raw.map(async (c) => {
       const st = Number(await contract.getStatus(c.id));
       return { ...parseC(c), status: st };
@@ -686,7 +672,6 @@ function updateStats() {
   document.getElementById("stat-success").textContent = success;
 }
 
-// ── Render ────────────────────────────────────────────────────────────────
 function setFilter(f, el) {
   currentFilter = f;
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
@@ -754,7 +739,6 @@ function cardHTML(c) {
   </div>`;
 }
 
-// ── Create campaign ───────────────────────────────────────────────────────
 function openCreate() {
   if (!account) { toast("Connect wallet first", "", "err"); return; }
   openModal("modal-create");
@@ -794,7 +778,6 @@ async function createCampaign() {
   }
 }
 
-// ── Campaign detail ───────────────────────────────────────────────────────
 async function openDetail(id) {
   openModal("modal-detail");
   const body = document.getElementById("modal-detail-body");
@@ -824,7 +807,6 @@ async function openDetail(id) {
       ? `<img class="detail-img" src="${escHtml(c.imageUrl)}" alt="" onerror="this.outerHTML='<div class=\\'detail-img\\'>${CAT_ICONS[c.category]}</div>'"/>`
       : `<div class="detail-img">${CAT_ICONS[c.category]}</div>`;
 
-    // Contributors list (top 5)
     const top5 = contribs.slice(0, 5);
     let contribRows = "";
     for (const addr of top5) {
@@ -913,7 +895,6 @@ async function openDetail(id) {
   }
 }
 
-// ── Actions ───────────────────────────────────────────────────────────────
 async function contribute(id) {
   const amtStr = document.getElementById("contrib-amount")?.value;
   if (!amtStr || parseFloat(amtStr) <= 0) { toast("Enter an amount", "", "err"); return; }
@@ -962,7 +943,6 @@ async function execTx(fn, successMsg) {
   }
 }
 
-// ── Modals ────────────────────────────────────────────────────────────────
 function openModal(id)  { document.getElementById(id).classList.add("open"); }
 function closeModal(id) { document.getElementById(id).classList.remove("open"); }
 function closeIfOverlay(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
@@ -977,7 +957,6 @@ function clearCreateForm() {
   document.getElementById("c-cat").value = "0";
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────
 function toast(title, msg="", type="") {
   const el = document.createElement("div");
   el.className = "toast" + (type ? " "+type : "");
@@ -986,7 +965,6 @@ function toast(title, msg="", type="") {
   setTimeout(() => el.remove(), 5000);
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────
 function shortAddr(a) { return a ? a.slice(0,6)+"…"+a.slice(-4) : ""; }
 function shortTx(h)   { return h ? h.slice(0,10)+"…" : ""; }
 function escHtml(s)   { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -998,7 +976,6 @@ function daysLeft(ts) {
 }
 function parseErr(e) {
   const m = e?.reason || e?.data?.message || e?.message || String(e);
-  // Prettify common reverts
   if (m.includes("GoalNotReached"))     return "Goal not reached yet";
   if (m.includes("CampaignNotEnded"))   return "Campaign still active";
   if (m.includes("AlreadyClaimed"))     return "Funds already claimed";
@@ -1011,14 +988,12 @@ function parseErr(e) {
   return m.slice(0, 120);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
   if (CONTRACT_ADDRESS === "0x0000000000000000000000000000000000000000") {
     toast("⚙️ Setup required", "Update CONTRACT_ADDRESS in index.html after deploying", "err");
   }
   loadCampaigns();
 
-  // Auto-connect if already authorized
   if (window.ethereum) {
     window.ethereum.request({ method: "eth_accounts" }).then(accounts => {
       if (accounts.length > 0) connectWallet();
